@@ -3,39 +3,66 @@ version: '3.8'
 services:
   frontend:
     build: ./frontend
+    image: portal-mamaloo_frontend
+    container_name: devFrontend-portalMamaloo
     ports:
-      - "5173:5173"
+      - "5185:5185"
     volumes:
       - ./frontend:/app
-      - /app/node_modules  # Adicione esta linha (novo volume)
-    environment:           # Adicione esta seção (novas variáveis)
+      - /app/node_modules
+    environment:
       NODE_ENV: development
       npm_config_platform: linux
       npm_config_arch: x64
-    command: npm run dev
+    command: npm run dev -- --host 0.0.0.0
     stdin_open: true
     tty: true
+    networks: 
+      - swag_default
 
   backend:
-    build: ./backend
-    ports:
-      - "8000:8000"
-    volumes:
-      - ./backend:/app
-    command: uvicorn main:app --reload --host 0.0.0.0
-    depends_on:
-      - database
+      build: ./backend
+      image: portal-mamaloo_backend
+      container_name: devBackend-portalMamaloo
+      ports:
+        - "8025:8025"
+      volumes:
+        - ./backend:/app
+      environment:
+        - DATABASE_URL=postgresql://postgres:1234@database:5432/meubanco
+      command: sh -c "sleep 5 && python -m app.seeds && uvicorn app.main:app --reload --host 0.0.0.0 --port 8025"
+      depends_on:
+        - database
+      networks: 
+        - swag_default
 
   database:
-    image: postgres:13
+    image: postgres:13  
+    container_name: database-portalMamaloo
     environment:
       POSTGRES_DB: meubanco
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: 1234
     ports:
-      - "5432:5432"
+      - "5436:5432"
     volumes:
       - pg_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d meubanco"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks: 
+      - swag_default
+    restart: unless-stopped 
 
 volumes:
   pg_data:
+
+networks:
+  swag_default:
+    driver: bridge
+
+
+##testeeee
+
